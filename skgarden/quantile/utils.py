@@ -39,9 +39,14 @@ def weighted_percentile(a, q, weights=None, sorter=None):
     """
     if weights is None:
         weights = np.ones_like(a)
-    if q > 100 or q < 0:
-        raise ValueError("q should be in-between 0 and 100, "
-                         "got %d" % q)
+        
+    if isinstance(q, (int, float)):
+        q = np.array([q])
+    
+    q = np.array(q).flatten()
+    
+    if q.max() > 100 or q.min() < 0:
+        raise ValueError("q should be in-between 0 and 100")
 
     a = np.asarray(a, dtype=np.float32)
     weights = np.asarray(weights, dtype=np.float32)
@@ -70,12 +75,16 @@ def weighted_percentile(a, q, weights=None, sorter=None):
 
     # Step 2
     partial_sum = 100.0 / total * (sorted_cum_weights - sorted_weights / 2.0)
-    start = np.searchsorted(partial_sum, q) - 1
-    if start == len(sorted_cum_weights) - 1:
-        return sorted_a[-1]
-    if start == -1:
-        return sorted_a[0]
+    start = np.searchsorted(partial_sum, q) - 1   
+    q_values = np.zeros(q.shape)
+    q_values[start == len(sorted_cum_weights) - 1] = sorted_a[-1]
+    q_values[start == -1] = sorted_a[0]
+    valid = (start != len(sorted_cum_weights) - 1) & (start != -1)
 
     # Step 3.
-    fraction = (q - partial_sum[start]) / (partial_sum[start + 1] - partial_sum[start])
-    return sorted_a[start] + fraction * (sorted_a[start + 1] - sorted_a[start])
+    fraction = (q[valid] - partial_sum[start[valid]]) /\
+    (partial_sum[start[valid] + 1] - partial_sum[start[valid]])
+    
+    q_values[valid] = sorted_a[start[valid]] + fraction * (sorted_a[start[valid] + 1] - sorted_a[start[valid]])
+    
+    return q_values
