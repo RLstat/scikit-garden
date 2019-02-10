@@ -9,4 +9,5 @@ dist/
 .idea/
 *.c
 *.so
+*-win_amd64.pyd
 site/

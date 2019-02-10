@@ -128,16 +128,21 @@ class BaseForestQuantileRegressor(ForestRegressor):
         X = check_array(X, dtype=np.float32, accept_sparse="csc")
         if quantile is None:
             return super(BaseForestQuantileRegressor, self).predict(X)
+        
+        if isinstance(quantile, (int, float)):
+            n_quantile = 1
+        else:
+            n_quantile = len(quantile)
 
         sorter = np.argsort(self.y_train_)
         X_leaves = self.apply(X)
         weights = np.zeros((X.shape[0], len(self.y_train_)))
-        quantiles = np.zeros((X.shape[0]))
+        quantiles = np.zeros((X.shape[0], n_quantile))
         for i, x_leaf in enumerate(X_leaves):
             mask = self.y_train_leaves_ != np.expand_dims(x_leaf, 1)
             x_weights = ma.masked_array(self.y_weights_, mask)
             weights = x_weights.sum(axis=0)
-            quantiles[i] = weighted_percentile(
+            quantiles[i, :] = weighted_percentile(
                 self.y_train_, quantile, weights, sorter)
         return quantiles
 
